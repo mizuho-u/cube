@@ -1,67 +1,60 @@
 package main
 
 import (
-	"cube/manager"
-	"cube/node"
 	"cube/task"
-	"cube/worker"
 	"fmt"
+	"os"
 	"time"
 
-	"github.com/golang-collections/collections/queue"
-	"github.com/google/uuid"
+	"github.com/docker/docker/client"
 )
 
 func main() {
 
-	t := task.Task{
-		ID:     uuid.New(),
-		Name:   "task-1",
-		State:  task.Pending,
-		Image:  "Image-1",
-		Memory: 1024,
-		Disk:   1,
+	dockerTask, createResult := createContainer()
+	if createResult.Error != nil {
+		os.Exit(1)
 	}
 
-	te := task.TaskEvent{
-		ID:        uuid.New(),
-		State:     task.Pending,
-		Timestamp: time.Now(),
-		Task:      t,
+	time.Sleep(time.Second * 5)
+	stopContainer(dockerTask, createResult.ContainerId)
+}
+
+func createContainer() (*task.Docker, *task.DockerResult) {
+	c := task.Config{
+		Name:  "test-container-1",
+		Image: "postgres:13",
+		Env: []string{
+			"POSTGRES_USER=cube",
+			"POSTGRES_PASSWORD=secret",
+		},
 	}
 
-	fmt.Println(te.ID)
-
-	w := worker.Worker{
-		Name:  "worker-1",
-		Queue: *queue.New(),
-		Db:    make(map[uuid.UUID]*task.Task),
-	}
-	w.CollectStats()
-	w.RunTask()
-	w.StartTask()
-	w.StopTask()
-
-	m := manager.Manager{
-		Penging: *queue.New(),
-		TaskDb:  make(map[string][]*task.Task),
-		EventDb: make(map[string][]*task.TaskEvent),
-		Workers: []string{w.Name},
+	dc, _ := client.NewClientWithOpts(client.FromEnv)
+	d := task.Docker{
+		Client: dc,
+		Config: c,
 	}
 
-	m.SelectWorker()
-	m.UpdateTasks()
-	m.SendWork()
-
-	n := node.Node{
-		Name:   "Node-1",
-		Ip:     "192.168.1.1",
-		Cores:  4,
-		Memory: 1024,
-		Disk:   25,
-		Role:   "worker",
+	result := d.Run()
+	if result.Error != nil {
+		fmt.Printf("%v\n", result.Error)
+		return nil, &result
 	}
 
-	fmt.Println(n.Name)
+	fmt.Printf("container is running %s\n", result.ContainerId)
+	return &d, &result
+}
+
+func stopContainer(d *task.Docker, id string) *task.DockerResult {
+
+	result := d.Stop(id)
+	if result.Error != nil {
+		fmt.Printf("%v\n", result.Error)
+		return &result
+	}
+
+	fmt.Printf("container has been stoped and removed %s\n", id)
+	return &result
 
 }
