@@ -18,6 +18,13 @@ type Docker struct {
 	Config Config
 }
 
+func NewDocker(c Config) *Docker {
+
+	dc, _ := client.NewClientWithOpts(client.FromEnv)
+
+	return &Docker{Client: dc, Config: c}
+}
+
 type DockerResult struct {
 	Error       error
 	Action      string

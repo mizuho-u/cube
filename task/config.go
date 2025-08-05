@@ -16,3 +16,12 @@ type Config struct {
 	Env           []string
 	RestartPolicy string
 }
+
+func NewConfig(t *Task) Config {
+
+	return Config{
+		Name:  t.Name,
+		Image: t.Image,
+	}
+
+}
