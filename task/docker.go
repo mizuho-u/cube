@@ -67,6 +67,7 @@ func (d *Docker) Run() DockerResult {
 		PublishAllPorts: true,
 	}
 
+	// TODO: コンテナ名が重複している場合はCreateを飛ばす（stopしてる時など）
 	resp, err := d.Client.ContainerCreate(ctx, &cc, &hc, nil, nil, d.Config.Name)
 	if err != nil {
 		log.Printf("creating container error %s", err)
@@ -114,4 +115,21 @@ func (d *Docker) Stop(id string) DockerResult {
 
 	return DockerResult{Action: "stop", Result: "success", Error: nil}
 
+}
+
+func (d *Docker) Inspect(containerID string) DockerInspectResponse {
+	dc, _ := client.NewClientWithOpts(client.FromEnv)
+	ctx := context.Background()
+	resp, err := dc.ContainerInspect(ctx, containerID)
+	if err != nil {
+		log.Printf("Error inspecting container: %s\n", err)
+		return DockerInspectResponse{Error: err}
+	}
+
+	return DockerInspectResponse{Container: &resp}
+}
+
+type DockerInspectResponse struct {
+	Error     error
+	Container *container.InspectResponse
 }

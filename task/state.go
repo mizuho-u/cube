@@ -15,7 +15,7 @@ var stateTransitionMap = map[State][]State{
 	Scheduled: {Scheduled, Running, Failed},
 	Running:   {Running, Completed, Failed},
 	Completed: {},
-	Failed:    {},
+	Failed:    {Scheduled},
 }
 
 func Contains(states []State, state State) bool {

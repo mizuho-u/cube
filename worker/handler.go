@@ -24,7 +24,7 @@ func (a *Api) StartTaskHanndler(w http.ResponseWriter, r *http.Request) {
 	err := d.Decode(&te)
 
 	if err != nil {
-		msg := fmt.Sprintf("Error unmarshalling body: %v\n", err)
+		msg := fmt.Sprintf("[Worker] Error unmarshalling body: %v\n", err)
 		log.Println(msg)
 
 		w.WriteHeader(400)

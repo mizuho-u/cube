@@ -130,3 +130,44 @@ func (w *Worker) RunTasks() {
 
 	}
 }
+
+func (w *Worker) InspecTask(t task.Task) task.DockerInspectResponse {
+	config := task.NewConfig(&t)
+	d := task.NewDocker(config)
+	return d.Inspect(t.ContainerID)
+}
+
+func (w *Worker) UpdateTasks() {
+	for {
+		log.Println("Checking status of tasks")
+		w.updateTasks()
+		log.Println("Task updated competed")
+		time.Sleep(15 * time.Second)
+	}
+}
+
+func (w *Worker) updateTasks() {
+	for id, t := range w.Db {
+
+		if t.State == task.Running {
+			resp := w.InspecTask(*t)
+			if resp.Error != nil {
+				log.Printf("Error: %v\n", resp.Error)
+				continue
+			}
+
+			if resp.Container == nil {
+				log.Printf("No container for running task %s\n", id)
+				w.Db[id].State = task.Failed
+			}
+
+			if resp.Container.State.Status == "exited" {
+				log.Printf("Container for task %s in non-running state %s\n", id, resp.Container.State.Status)
+				w.Db[id].State = task.Failed
+			}
+
+			w.Db[id].HostPorts = resp.Container.NetworkSettings.NetworkSettingsBase.Ports
+		}
+
+	}
+}

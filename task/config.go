@@ -20,8 +20,9 @@ type Config struct {
 func NewConfig(t *Task) Config {
 
 	return Config{
-		Name:  t.Name,
-		Image: t.Image,
+		Name:         t.Name,
+		Image:        t.Image,
+		ExposedPorts: t.ExposedPorts,
 	}
 
 }
