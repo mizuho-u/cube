@@ -23,6 +23,7 @@ type Task struct {
 	FinishTime    time.Time
 	HealthCheck   string
 	RestartCount  int
+	ScheduledOn   string
 }
 
 type TaskEvent struct {

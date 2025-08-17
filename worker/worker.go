@@ -21,7 +21,7 @@ type Worker struct {
 
 func (w *Worker) CollectStats() {
 	for {
-		log.Println("Collecting stats")
+		w.Logln("Collecting stats")
 		w.Stats = GetStats()
 		w.Stats.TaskCount = w.TaskCount
 		time.Sleep(15 * time.Second)
@@ -46,7 +46,7 @@ func (w *Worker) runTask() task.DockerResult {
 
 	t := w.Queue.Dequeue()
 	if t == nil {
-		log.Println("no task in the queue")
+		w.Logln("no task in the queue")
 		return task.DockerResult{Error: nil}
 	}
 
@@ -83,7 +83,7 @@ func (w *Worker) StartTask(t task.Task) task.DockerResult {
 	d := task.NewDocker(config)
 	result := d.Run()
 	if result.Error != nil {
-		log.Printf("error staring container %s", result.Error)
+		w.Logln("error staring container %s", result.Error)
 		t.State = task.Failed
 		w.Db[t.ID] = &t
 		return result
@@ -102,7 +102,7 @@ func (w *Worker) StopTask(t task.Task) task.DockerResult {
 
 	result := d.Stop(t.ContainerID)
 	if result.Error != nil {
-		log.Printf("error stopping container %s", result.Error)
+		w.Logln("error stopping container %s", result.Error)
 		return result
 	}
 
@@ -110,7 +110,7 @@ func (w *Worker) StopTask(t task.Task) task.DockerResult {
 	t.State = task.Completed
 	w.Db[t.ID] = &t
 
-	log.Printf("stopped and removed container %s for %s", t.ContainerID, t.ID)
+	w.Logln("stopped and removed container %s for %s", t.ContainerID, t.ID)
 	return result
 }
 
@@ -119,13 +119,13 @@ func (w *Worker) RunTasks() {
 		if w.Queue.Len() != 0 {
 			result := w.runTask()
 			if result.Error != nil {
-				log.Printf("Error running task: %v\n", result.Error)
+				w.Logln("Error running task: %v", result.Error)
 			} else {
-				log.Printf("No tasks to process currently.\n")
+				w.Logln("No tasks to process currently.")
 			}
 		}
 
-		log.Println("Sleep for 10 seconds.")
+		w.Logln("Sleep for 10 seconds.")
 		time.Sleep(10 * time.Second)
 
 	}
@@ -139,9 +139,9 @@ func (w *Worker) InspecTask(t task.Task) task.DockerInspectResponse {
 
 func (w *Worker) UpdateTasks() {
 	for {
-		log.Println("Checking status of tasks")
+		w.Logln("Checking status of tasks")
 		w.updateTasks()
-		log.Println("Task updated competed")
+		w.Logln("Task updated competed")
 		time.Sleep(15 * time.Second)
 	}
 }
@@ -152,17 +152,17 @@ func (w *Worker) updateTasks() {
 		if t.State == task.Running {
 			resp := w.InspecTask(*t)
 			if resp.Error != nil {
-				log.Printf("Error: %v\n", resp.Error)
+				w.Logln("Error: %v", resp.Error)
 				continue
 			}
 
 			if resp.Container == nil {
-				log.Printf("No container for running task %s\n", id)
+				w.Logln("No container for running task %s", id)
 				w.Db[id].State = task.Failed
 			}
 
 			if resp.Container.State.Status == "exited" {
-				log.Printf("Container for task %s in non-running state %s\n", id, resp.Container.State.Status)
+				w.Logln("Container for task %s in non-running state %s", id, resp.Container.State.Status)
 				w.Db[id].State = task.Failed
 			}
 
@@ -170,4 +170,16 @@ func (w *Worker) updateTasks() {
 		}
 
 	}
+}
+
+func (w *Worker) Logln(msg string, param ...any) string {
+
+	s := "[worker " + w.Name + "] " + msg
+	if len(param) >= 1 {
+		s = fmt.Sprintf(s, param...)
+	}
+
+	log.Println(s)
+
+	return s
 }
