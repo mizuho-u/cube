@@ -1,5 +1,7 @@
 package node
 
+import "cube/worker"
+
 type Node struct {
 	Name            string
 	Ip              string
@@ -10,6 +12,7 @@ type Node struct {
 	DiskAllocated   int
 	Role            string
 	TaskCount       int
+	Stats           worker.Stats
 }
 
 func New(worker, address, role string) *Node {
