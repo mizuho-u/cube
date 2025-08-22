@@ -2,14 +2,10 @@ package main
 
 import (
 	"cube/manager"
-	"cube/task"
 	"cube/worker"
 	"fmt"
 	"os"
 	"strconv"
-
-	"github.com/golang-collections/collections/queue"
-	"github.com/google/uuid"
 )
 
 func main() {
@@ -22,26 +18,14 @@ func main() {
 
 	fmt.Println("Starting Cube worker")
 
-	w1 := worker.Worker{
-		Name:  "w1",
-		Queue: *queue.New(),
-		Db:    make(map[uuid.UUID]*task.Task),
-	}
-	wapi1 := worker.Api{Address: whost, Port: wport, Worker: &w1}
+	w1 := worker.New("w1", "memory")
+	wapi1 := worker.Api{Address: whost, Port: wport, Worker: w1}
 
-	w2 := worker.Worker{
-		Name:  "w2",
-		Queue: *queue.New(),
-		Db:    make(map[uuid.UUID]*task.Task),
-	}
-	wapi2 := worker.Api{Address: whost, Port: wport + 1, Worker: &w2}
+	w2 := worker.New("w2", "memory")
+	wapi2 := worker.Api{Address: whost, Port: wport + 1, Worker: w2}
 
-	w3 := worker.Worker{
-		Name:  "w3",
-		Queue: *queue.New(),
-		Db:    make(map[uuid.UUID]*task.Task),
-	}
-	wapi3 := worker.Api{Address: whost, Port: wport + 2, Worker: &w3}
+	w3 := worker.New("w3", "memory")
+	wapi3 := worker.Api{Address: whost, Port: wport + 2, Worker: w3}
 
 	go w1.RunTasks()
 	go w1.CollectStats()
@@ -63,7 +47,7 @@ func main() {
 		fmt.Sprintf("%s:%d", whost, wport+1),
 		fmt.Sprintf("%s:%d", whost, wport+2),
 	}
-	m := manager.New(workers, "epvm")
+	m := manager.New(workers, "epvm", "memory")
 	mapi := manager.Api{Address: mhost, Port: mport, Manager: m}
 
 	go m.ProcessTasks()

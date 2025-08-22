@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cube/node"
 	"cube/scheduler"
+	"cube/store"
 	"cube/task"
 	"cube/worker"
 	"encoding/json"
@@ -19,9 +20,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func New(workers []string, schedulerType string) *Manager {
-	taskDb := make(map[uuid.UUID]*task.Task)
-	eventDb := make(map[uuid.UUID]*task.TaskEvent)
+func New(workers []string, schedulerType, dbType string) *Manager {
 	taskWorkerMap := make(map[uuid.UUID]string)
 
 	workerTaskMap := make(map[string][]uuid.UUID)
@@ -44,23 +43,34 @@ func New(workers []string, schedulerType string) *Manager {
 		s = &scheduler.RoundRobin{Name: "roundrobin"}
 	}
 
-	return &Manager{
+	m := &Manager{
 		Penging:       *queue.New(),
 		Workers:       workers,
-		TaskDb:        taskDb,
-		EventDb:       eventDb,
 		TaskWorkerMap: taskWorkerMap,
 		WorkerTaskMap: workerTaskMap,
 		WorkerNodes:   nodes,
 		Scheduler:     s,
 	}
 
+	var ts store.Store[*task.Task]
+	var es store.Store[*task.TaskEvent]
+	switch dbType {
+	case "memory":
+		ts = store.NewInMemoryTaskStore[*task.Task]()
+		es = store.NewInMemoryTaskStore[*task.TaskEvent]()
+	}
+
+	m.TaskDb = ts
+	m.EventDb = es
+
+	return m
+
 }
 
 type Manager struct {
 	Penging       queue.Queue
-	TaskDb        map[uuid.UUID]*task.Task
-	EventDb       map[uuid.UUID]*task.TaskEvent
+	TaskDb        store.Store[*task.Task]
+	EventDb       store.Store[*task.TaskEvent]
 	Workers       []string
 	WorkerTaskMap map[string][]uuid.UUID
 	TaskWorkerMap map[uuid.UUID]string
@@ -109,20 +119,20 @@ func (m *Manager) updateTasks() {
 		for _, t := range tasks {
 			m.logln("Attempting to update task %v", t.ID)
 
-			_, ok := m.TaskDb[t.ID]
-			if !ok {
+			taskPersisted, err := m.TaskDb.Get(t.ID.String())
+			if err != nil {
 				m.logln("Task with ID %s not found", t.ID)
 				return
 			}
 
-			if m.TaskDb[t.ID].State != t.State {
-				m.TaskDb[t.ID].State = t.State
+			if taskPersisted.State != t.State {
+				taskPersisted.State = t.State
 			}
 
-			m.TaskDb[t.ID].StartTime = t.StartTime
-			m.TaskDb[t.ID].FinishTime = t.FinishTime
-			m.TaskDb[t.ID].ContainerID = t.ContainerID
-			m.TaskDb[t.ID].HostPorts = t.HostPorts
+			taskPersisted.StartTime = t.StartTime
+			taskPersisted.FinishTime = t.FinishTime
+			taskPersisted.ContainerID = t.ContainerID
+			taskPersisted.HostPorts = t.HostPorts
 		}
 
 	}
@@ -136,12 +146,21 @@ func (m *Manager) SendWork() {
 
 		e := m.Penging.Dequeue()
 		te := e.(task.TaskEvent)
-		m.EventDb[te.ID] = &te
+		err := m.EventDb.Put(te.ID.String(), &te)
+		if err != nil {
+			m.logln("Error attempting to store task event %s: %s\n", te.ID.String(), err)
+			return
+		}
 		m.logln("Pulled %v off pending queue", te)
 
 		taskWorker, ok := m.TaskWorkerMap[te.Task.ID]
 		if ok {
-			persistedTask := m.TaskDb[te.Task.ID]
+			persistedTask, err := m.TaskDb.Get(te.Task.ID.String())
+			if err != nil {
+				m.logln("unable to schedule task: %s", err)
+				return
+			}
+
 			if te.State == task.Completed && task.ValidStateTransition(persistedTask.State, te.State) {
 				m.stopTask(taskWorker, te.Task.ID.String())
 				return
@@ -164,7 +183,7 @@ func (m *Manager) SendWork() {
 		m.TaskWorkerMap[t.ID] = w.Name
 
 		t.State = task.Scheduled
-		m.TaskDb[t.ID] = &t
+		m.TaskDb.Put(t.ID.String(), &t)
 
 		data, err := json.Marshal(te)
 		if err != nil {
@@ -212,9 +231,11 @@ func (m *Manager) AddTask(te task.TaskEvent) {
 }
 
 func (m *Manager) GetTasks() []*task.Task {
-	tasks := []*task.Task{}
-	for _, t := range m.TaskDb {
-		tasks = append(tasks, t)
+
+	tasks, err := m.TaskDb.List()
+	if err != nil {
+		m.logln("error getting list of tasks: %v\n", err)
+		return nil
 	}
 
 	return tasks
@@ -310,7 +331,7 @@ func (m *Manager) restartTask(t *task.Task) {
 	w := m.TaskWorkerMap[t.ID]
 	t.State = task.Scheduled
 	t.RestartCount++
-	m.TaskDb[t.ID] = t
+	m.TaskDb.Put(t.ID.String(), t)
 
 	te := task.TaskEvent{
 		ID:        uuid.New(),

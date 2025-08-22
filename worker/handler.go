@@ -56,13 +56,12 @@ func (a *Api) StopTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tID, _ := uuid.Parse(taskID)
-	_, ok := a.Worker.Db[tID]
-	if !ok {
+	taskToStop, err := a.Worker.Db.Get(taskID)
+	if err != nil {
 		log.Printf("No task with ID %v found", tID)
 		w.WriteHeader(404)
 	}
 
-	taskToStop := a.Worker.Db[tID]
 	taskCopy := *taskToStop
 	taskCopy.State = task.Completed
 	a.Worker.AddTask(taskCopy)
