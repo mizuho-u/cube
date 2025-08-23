@@ -19,20 +19,27 @@ type Worker struct {
 	Stats     *Stats
 }
 
-func New(name string, taskDbType string) *Worker {
+func New(name string, taskDbType string) (*Worker, error) {
 	w := Worker{
 		Name:  name,
 		Queue: *queue.New(),
 	}
 
 	var s store.Store[*task.Task]
+	var err error
 	switch taskDbType {
 	case "memory":
 		s = store.NewInMemoryTaskStore[*task.Task]()
+	case "persistent":
+		s, err = store.NewPersistentTaskStore[*task.Task](fmt.Sprintf("%s_tasks.db", name), 0600, "tasks")
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	w.Db = s
-	return &w
+	return &w, nil
 }
 
 func (w *Worker) CollectStats() {

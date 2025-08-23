@@ -20,7 +20,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func New(workers []string, schedulerType, dbType string) *Manager {
+func New(workers []string, schedulerType, dbType string) (*Manager, error) {
 	taskWorkerMap := make(map[uuid.UUID]string)
 
 	workerTaskMap := make(map[string][]uuid.UUID)
@@ -54,16 +54,27 @@ func New(workers []string, schedulerType, dbType string) *Manager {
 
 	var ts store.Store[*task.Task]
 	var es store.Store[*task.TaskEvent]
+	var err error
 	switch dbType {
 	case "memory":
 		ts = store.NewInMemoryTaskStore[*task.Task]()
 		es = store.NewInMemoryTaskStore[*task.TaskEvent]()
+	case "persistent":
+		ts, err = store.NewPersistentTaskStore[*task.Task]("tasks.db", 0600, "tasks")
+		if err != nil {
+			return nil, err
+		}
+
+		es, err = store.NewPersistentTaskStore[*task.TaskEvent]("events.db", 0600, "events")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	m.TaskDb = ts
 	m.EventDb = es
 
-	return m
+	return m, nil
 
 }
 

@@ -18,13 +18,22 @@ func main() {
 
 	fmt.Println("Starting Cube worker")
 
-	w1 := worker.New("w1", "memory")
+	w1, err := worker.New("w1", "persistent")
+	if err != nil {
+		return
+	}
 	wapi1 := worker.Api{Address: whost, Port: wport, Worker: w1}
 
-	w2 := worker.New("w2", "memory")
+	w2, err := worker.New("w2", "persistent")
+	if err != nil {
+		return
+	}
 	wapi2 := worker.Api{Address: whost, Port: wport + 1, Worker: w2}
 
-	w3 := worker.New("w3", "memory")
+	w3, err := worker.New("w3", "persistent")
+	if err != nil {
+		return
+	}
 	wapi3 := worker.Api{Address: whost, Port: wport + 2, Worker: w3}
 
 	go w1.RunTasks()
@@ -47,7 +56,10 @@ func main() {
 		fmt.Sprintf("%s:%d", whost, wport+1),
 		fmt.Sprintf("%s:%d", whost, wport+2),
 	}
-	m := manager.New(workers, "epvm", "memory")
+	m, err := manager.New(workers, "epvm", "persistent")
+	if err != nil {
+		return
+	}
 	mapi := manager.Api{Address: mhost, Port: mport, Manager: m}
 
 	go m.ProcessTasks()

@@ -8,18 +8,21 @@ require (
 	github.com/google/uuid v1.6.0
 )
 
-require github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
+require (
+	github.com/c9s/goprocinfo v0.0.0-20210130143923-c95fcf8c64a8
+	github.com/go-chi/chi/v5 v5.2.2
+	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
+	go.etcd.io/bbolt v1.4.3
+)
 
 require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
-	github.com/c9s/goprocinfo v0.0.0-20210130143923-c95fcf8c64a8 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-chi/chi/v5 v5.2.2 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -36,7 +39,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.37.0 // indirect
 	go.opentelemetry.io/otel/metric v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
 )
