@@ -5,17 +5,26 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Package",
+            "name": "Launch Manager",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}",
-            "env": {
-                "CUBE_WORKER_HOST": "localhost",
-                "CUBE_WORKER_PORT": "5555",
-                "CUBE_MANAGER_HOST": "localhost",
-                "CUBE_MANAGER_PORT": "5560"
-            }
+            "args": [
+                "manager",
+                "-p",
+                "5560"
+            ],
+        },
+        {
+            "name": "Launch Worker",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "args": [
+                "worker",
+            ],
         },
     ]
 }

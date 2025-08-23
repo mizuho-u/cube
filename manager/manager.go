@@ -237,6 +237,10 @@ func (m *Manager) SendWork() {
 	}
 }
 
+func (m *Manager) GetNodes() []*node.Node {
+	return m.WorkerNodes
+}
+
 func (m *Manager) AddTask(te task.TaskEvent) {
 	m.Penging.Enqueue(te)
 }

@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"cube/node"
 	"cube/task"
 	"encoding/json"
 	"fmt"
@@ -49,11 +50,25 @@ func (a *Api) GetTaskHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(a.Manager.GetTasks())
 }
 
+func (a *Api) GetNodesHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	var nodes []*node.Node
+	for _, n := range a.Manager.GetNodes() {
+		node.GetStats(n)
+		nodes = append(nodes, n)
+	}
+
+	json.NewEncoder(w).Encode(nodes)
+}
+
 func (a *Api) StopTaskHandler(w http.ResponseWriter, r *http.Request) {
 	taskID := chi.URLParam(r, "taskID")
 	if taskID == "" {
 		log.Printf("No taskID passed in request.\n")
 		w.WriteHeader(400)
+		return
 	}
 
 	tID, _ := uuid.Parse(taskID)
@@ -61,6 +76,7 @@ func (a *Api) StopTaskHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("No task with ID %v found", tID)
 		w.WriteHeader(404)
+		return
 	}
 
 	te := task.TaskEvent{
